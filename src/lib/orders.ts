@@ -113,7 +113,7 @@ ${catalogForPrompt(catalog)}
 RULES
 - Map every requested item to a catalog id. Only use ids from the catalog. If something is not on the catalog, put it in "unmatched".
 - Convert quantities to the item's unit. kg items: "aadha kilo"/"half kg"/"ardha kilo"/"arai kilo" = 0.5, "paav"/"quarter" = 0.25, "dedh kilo" = 1.5, "dhai kilo" = 2.5, "250 gram" = 0.25, "ek kilo" = 1. pc items: count pieces. box items: count boxes. If no quantity is said, use 1 (or 0.5 for kg sweets).
-- customer_name: only if they said it, else "".
+- customer_name: only if they said it, written in Roman/English letters (e.g. "प्रिया" -> "Priya"), else "".
 - pickup_hint: if they said a time ("shaam 6 baje" = 18:00, "7 baje raat" = 19:00, "sanje aaru" = 18:00), give HH:MM, else "".
 - reply_text: 1–3 short, warm sentences in the SAME language and script the customer used (language code: ${language || "detect it"}). Read back the items with quantities, say the total using the exact placeholder {TOTAL}, and ask them to confirm. Natural spoken style, like a friendly shopkeeper.${
     offerUpsell
