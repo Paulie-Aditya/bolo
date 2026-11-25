@@ -68,8 +68,14 @@ export async function transcribe(
   opts: { keyterms?: string[]; language?: string; chaos?: boolean } = {},
 ): Promise<{ transcript: string; language: string | null; languageProbability?: number }> {
   return tracked("stt", !!opts.chaos, async () => {
+    // Browsers label recordings "audio/webm;codecs=opus" (Chrome) or "audio/mp4" (Safari);
+    // Sarvam wants the bare type, so strip codec parameters and name the file to match.
+    const base = (audio.type || "audio/webm").split(";")[0].trim().toLowerCase();
+    const type = base === "video/webm" ? "audio/webm" : base;
+    const ext = { "audio/webm": "webm", "audio/mp4": "m4a", "audio/ogg": "ogg", "audio/wav": "wav", "audio/x-wav": "wav", "audio/mpeg": "mp3", "audio/aac": "aac" }[type] ?? "webm";
+    const clean = new Blob([await audio.arrayBuffer()], { type });
     const fd = new FormData();
-    fd.append("file", audio, "order.webm");
+    fd.append("file", clean, `order.${ext}`);
     fd.append("model", "saaras:v4");
     fd.append("mode", "codemix");
     fd.append("language_code", opts.language || "unknown");
