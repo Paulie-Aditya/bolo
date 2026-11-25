@@ -1,0 +1,51 @@
+# Bolo voice canary: a tiny in-cluster probe of Bolo's Sarvam voice pipeline.
+# It polls https://<bolo>/api/health every 20s. When the pipeline is degraded the pod's
+# readiness probe fails, so Kubernetes emits "Readiness probe failed" events that the
+# NudgeBee agent picks up for AI root-cause analysis, and the logs carry the evidence.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bolo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bolo-voice-canary
+  namespace: bolo
+  labels: { app: bolo-voice-canary, service: bolo, dependency: sarvam-ai }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: bolo-voice-canary }
+  template:
+    metadata:
+      labels: { app: bolo-voice-canary, service: bolo, dependency: sarvam-ai }
+    spec:
+      containers:
+        - name: canary
+          image: curlimages/curl:8.11.1
+          env:
+            - name: BOLO_URL
+              value: https://bolo-festivehacks.vercel.app
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                body=$(curl -s --max-time 10 "$BOLO_URL/api/health" || echo '{"status":"unreachable"}')
+                if echo "$body" | grep -q '"status":"ok"'; then
+                  touch /tmp/healthy
+                  echo "$(date -u +%FT%TZ) bolo voice pipeline OK $body"
+                else
+                  rm -f /tmp/healthy
+                  echo "$(date -u +%FT%TZ) ERROR bolo voice pipeline DEGRADED (Sarvam errors) $body"
+                fi
+                sleep 20
+              done
+          readinessProbe:
+            exec: { command: ["/bin/sh", "-c", "test -f /tmp/healthy"] }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 1
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 50m, memory: 32Mi }
