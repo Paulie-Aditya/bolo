@@ -77,7 +77,12 @@ Bolo /api/health ──(scheduled HTTP check)──► NudgeBee automation
 Customers ◄── storefront switches to tap-to-order in seconds ┘   (orders keep flowing)
 ```
 
-The NudgeBee workflow definition is in [`nudgebee/`](nudgebee/). Rehearse it by turning on `chaos_sarvam_outage` in Flagsmith and placing a few voice orders.
+Two pieces feed NudgeBee:
+
+1. **In-cluster voice canary** ([`k8s/bolo-canary.yaml`](k8s/bolo-canary.yaml)). A tiny Deployment in a kind cluster that the NudgeBee agent watches. It polls `/api/health` every 20s and **fails its readiness probe when the Sarvam pipeline degrades**. NudgeBee then sees real Kubernetes events and logs for its AI root-cause analysis. `bash k8s/bootstrap.sh` creates the cluster and canary, then NudgeBee's own install command connects the agent.
+2. **Approval-gated runbook** ([`nudgebee/bolo-voice-failover.yml`](nudgebee/bolo-voice-failover.yml)). Every minute: HTTP health check → `events.store` (AI analysis) → `llm.summary` → `core.approval` → HTTP call to the Flagsmith Admin API that turns `voice_ordering` off → `events.add_evidence`.
+
+Rehearse it by turning on `chaos_sarvam_outage` in Flagsmith and placing a few voice orders.
 
 ## Architecture
 
