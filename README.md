@@ -4,7 +4,7 @@
 
 Built at **Festive Hacks (WeMakeDevs × WeAreDevelopers), BIEC Bengaluru, 25 Nov 2026** with **Sarvam AI**, **Flagsmith** and **NudgeBee**.
 
-**Demo video:** https://youtu.be/PAPsN99luh8 · **Live:** https://bolo-festivehacks.vercel.app · **Customer:** `/s/annapurna-sweets` · **Owner:** `/shop/annapurna-sweets` · **Ops:** `/ops`
+**Demo video (2 min):** https://youtu.be/PfqktYLH4a0 · [full 3:44 cut](https://youtu.be/PAPsN99luh8) · **Live:** https://bolo-festivehacks.vercel.app · **Customer:** `/s/annapurna-sweets` · **Owner:** `/shop/annapurna-sweets` · **Ops:** `/ops`
 
 ---
 
