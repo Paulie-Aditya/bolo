@@ -185,7 +185,9 @@ export default function Dashboard() {
           {/* Board */}
           <div className="grid md:grid-cols-3 gap-4">
             {COLUMNS.map((col) => {
-              const list = active.filter((o) => o.status === col.key).sort((a, b) => a.slot.localeCompare(b.slot) || a.createdAt - b.createdAt);
+              const list = active
+                .filter((o) => o.status === col.key)
+                .sort((a, b) => (col.key === "new" ? b.createdAt - a.createdAt : a.slot.localeCompare(b.slot) || a.createdAt - b.createdAt));
               return (
                 <section key={col.key} className="rounded-3xl bg-paper-2/70 border border-line p-3 min-h-[300px]">
                   <div className="flex items-center justify-between px-1 pb-2">
