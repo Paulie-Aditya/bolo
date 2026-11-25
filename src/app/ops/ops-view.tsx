@@ -61,7 +61,9 @@ export default function Ops() {
         </div>
         <div className="card p-5">
           <div className="text-xs font-bold uppercase text-ink-2">Runbook decision</div>
-          <div className="font-display text-2xl font-bold mt-1">{h?.action_needed === "disable_voice_ordering" ? "Pause voice ordering" : "No action"}</div>
+          <div className="font-display text-2xl font-bold mt-1">
+            {h?.action_needed === "disable_voice_ordering" ? "Pause voice ordering" : h?.status === "degraded" && !h.flags.voice_ordering ? "Handled: tap-to-order" : h && !h.flags.voice_ordering ? "Voice paused" : "No action"}
+          </div>
           <div className="text-sm text-ink-2 mt-1 break-words">{h?.sarvam.last_error ?? "No recent errors"}</div>
         </div>
       </div>
