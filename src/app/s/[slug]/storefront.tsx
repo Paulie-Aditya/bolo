@@ -159,7 +159,8 @@ export default function Storefront() {
       });
       if (dr.customerName && !name) setName(dr.customerName);
       if (dr.pickupHint) {
-        const best = cfg.slots.find((s) => !s.full && s.value >= dr.pickupHint);
+        const open = cfg.slots.filter((s) => !s.full);
+        const best = open.find((s) => s.value >= dr.pickupHint) ?? open[open.length - 1];
         if (best) setSlot(best.value);
       }
       if (d.soldOutAsked?.length) setErr(`Sorry, ${d.soldOutAsked.join(", ")} sold out for today.`);

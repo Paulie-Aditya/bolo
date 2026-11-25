@@ -115,9 +115,9 @@ RULES
 - Convert quantities to the item's unit. kg items: "aadha kilo"/"half kg"/"ardha kilo"/"arai kilo" = 0.5, "paav"/"quarter" = 0.25, "dedh kilo" = 1.5, "dhai kilo" = 2.5, "250 gram" = 0.25, "ek kilo" = 1. pc items: count pieces. box items: count boxes. If no quantity is said, use 1 (or 0.5 for kg sweets).
 - customer_name: only if they said it, written in Roman/English letters (e.g. "प्रिया" -> "Priya"), else "".
 - pickup_hint: if they said a time ("shaam 6 baje" = 18:00, "7 baje raat" = 19:00, "sanje aaru" = 18:00), give HH:MM, else "".
-- reply_text: 1–3 short, warm sentences in the SAME language and script the customer used (language code: ${language || "detect it"}). Read back the items with quantities, say the total using the exact placeholder {TOTAL}, and ask them to confirm. Natural spoken style, like a friendly shopkeeper.${
+- reply_text: at most 2 short, warm sentences (under 30 words in total, it is spoken aloud at a busy counter) in the SAME language and script the customer used (language code: ${language || "detect it"}). Read back the items with quantities, say the total using the exact placeholder {TOTAL}, and ask them to confirm. Do not repeat the pickup time or prices of each item. Natural spoken style, like a friendly shopkeeper.${
     offerUpsell
-      ? `\n- Then add ONE short sentence offering a "${gift!.name}" for ₹${gift!.price} as a festive gift, also in the customer's language (only if they did not already order it).`
+      ? `\n- Then add ONE very short sentence (under 12 words) offering a "${gift!.name}" for ₹${gift!.price} as a festive gift, also in the customer's language (only if they did not already order it).`
       : ""
   }
 - english_summary: one line in English for the shop owner, e.g. "1 kg Kaju Katli, 10 Gulab Jamun — pickup 18:00 — for Priya".`;
@@ -219,7 +219,7 @@ export async function getSlots(shop: Shop, capacity: number): Promise<Slot[]> {
   let start = h * 60 + m + 30; // need at least 30 minutes to pack
   start = Math.ceil(start / 30) * 30;
   const end = shop.closesAt * 60;
-  for (let t = Math.max(start, 9 * 60); t <= end - 30 && slots.length < 12; t += 30) {
+  for (let t = Math.max(start, 9 * 60); t <= end - 30 && slots.length < 30; t += 30) {
     const value = `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
     const taken = today.filter((o) => o.slot === value).length;
     slots.push({ value, label: slotLabel(value), taken, capacity, full: taken >= capacity });
