@@ -260,7 +260,7 @@ export async function createOrder(input: Omit<Order, "id" | "token" | "createdAt
   const id = `${input.shop.slice(0, 3)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   let ownerSummary = "";
   try {
-    if (ownerLang !== "en-IN") ownerSummary = await translate(ownerSentence(input), ownerLang, "en-IN");
+    if (ownerLang !== "en-IN") ownerSummary = await translate(ownerSentence(input), ownerLang, "en-IN", { mode: "formal" });
   } catch {
     ownerSummary = "";
   }

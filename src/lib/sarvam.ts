@@ -149,13 +149,13 @@ function parseLooseJSON<T>(content: string): T {
 }
 
 /** Mayura translation (short text). */
-export async function translate(text: string, target: string, source = "auto", opts: { chaos?: boolean } = {}): Promise<string> {
+export async function translate(text: string, target: string, source = "auto", opts: { chaos?: boolean; mode?: "formal" | "modern-colloquial" | "classic-colloquial" } = {}): Promise<string> {
   if (!text.trim()) return text;
   if (target === source) return text;
   return tracked("translate", !!opts.chaos, async () => {
     const d = await postJSON(
       "/translate",
-      { input: text.slice(0, 1000), source_language_code: source, target_language_code: target, model: "mayura:v1", mode: "modern-colloquial" },
+      { input: text.slice(0, 1000), source_language_code: source, target_language_code: target, model: "mayura:v1", mode: opts.mode ?? "modern-colloquial" },
       "translate",
     );
     return d.translated_text as string;
