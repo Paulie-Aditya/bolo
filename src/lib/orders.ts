@@ -1,4 +1,4 @@
-import { chatJSON, translate } from "./sarvam";
+import { chatJSON, translateExact } from "./sarvam";
 import type { CatalogItem, Shop, Unit } from "./shops";
 import { formatINR, formatQty, langLabel } from "./shops";
 import { getJSON, incr, lpush, lrange, setJSON, smembers } from "./store";
@@ -260,7 +260,7 @@ export async function createOrder(input: Omit<Order, "id" | "token" | "createdAt
   const id = `${input.shop.slice(0, 3)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   let ownerSummary = "";
   try {
-    if (ownerLang !== "en-IN") ownerSummary = await translate(ownerSentence(input), ownerLang, "en-IN", { mode: "formal" });
+    if (ownerLang !== "en-IN") ownerSummary = await translateExact(ownerSentence(input), ownerLang, langLabel(ownerLang));
   } catch {
     ownerSummary = "";
   }

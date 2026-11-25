@@ -148,6 +148,52 @@ function parseLooseJSON<T>(content: string): T {
   }
 }
 
+/** Plain-text Sarvam-105B completion. */
+export async function chatText(system: string, user: string, opts: { chaos?: boolean; maxTokens?: number } = {}): Promise<string> {
+  return tracked("chat", !!opts.chaos, async () => {
+    const d = await postJSON(
+      "/v1/chat/completions",
+      {
+        model: "sarvam-105b",
+        reasoning_effort: null,
+        temperature: 0.1,
+        max_tokens: opts.maxTokens ?? 400,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      },
+      "chat",
+    );
+    return String(d.choices?.[0]?.message?.content ?? "").trim();
+  });
+}
+
+const digits = (s: string) => (s.match(/\d+(?:[.,:]\d+)*/g) ?? []).map((x) => x.replace(/,/g, "")).sort().join("|");
+
+/**
+ * Translation for the shop owner, where a wrong number is a wrong order.
+ * Sarvam-105B first (told to keep numerals), then Mayura; each result must keep every number from the source.
+ */
+export async function translateExact(text: string, target: string, targetName: string): Promise<string> {
+  const want = digits(text);
+  try {
+    const out = await chatText(
+      `Translate the user's text from English into ${targetName}, in ${targetName} script, for a shopkeeper. Keep every number, time and price exactly as written in Western digits. Keep sweet names recognisable. Output only the translation.`,
+      text,
+    );
+    if (out && digits(out) === want) return out;
+    console.warn("[translateExact] llm numbers changed", want, "->", digits(out));
+  } catch (e) {
+    console.warn("[translateExact] llm failed", (e as Error).message);
+  }
+  try {
+    const out = await translate(text, target, "en-IN", { mode: "formal" });
+    if (digits(out) === want) return out;
+  } catch {}
+  return "";
+}
+
 /** Mayura translation (short text). */
 export async function translate(text: string, target: string, source = "auto", opts: { chaos?: boolean; mode?: "formal" | "modern-colloquial" | "classic-colloquial" } = {}): Promise<string> {
   if (!text.trim()) return text;
