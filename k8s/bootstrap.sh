@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Spin up a throwaway kind cluster, deploy the Bolo voice canary, and connect it to NudgeBee.
-#   bash k8s/bootstrap.sh <nudgebee-agent-auth-key>
-# (Admin -> Integrations -> Kubernetes Clusters -> Add K8s Account in app.nudgebee.com)
+# Spin up a throwaway kind cluster and deploy the Bolo voice canary.
+#   bash k8s/bootstrap.sh
+# Then connect it to NudgeBee by running the install command shown in
+# app.nudgebee.com -> Add Kubernetes Account -> Shell Script (it carries your agent key).
 set -euo pipefail
-KEY="${1:?usage: bootstrap.sh <nudgebee-agent-key>}"
 cd "$(dirname "$0")"
 if ! command -v kind >/dev/null; then
   curl -sLo /tmp/kind https://kind.sigs.k8s.io/dl/v0.29.0/kind-linux-amd64 && chmod +x /tmp/kind && sudo mv /tmp/kind /usr/local/bin/kind
@@ -17,6 +17,6 @@ nodes:
   - role: worker
 KIND
 kubectl apply -f bolo-canary.yaml
-curl -sLo /tmp/nb-installation.sh https://raw.githubusercontent.com/nudgebee/k8s-agent/main/installation.sh
-bash /tmp/nb-installation.sh -a "$KEY" -d true
+kubectl -n bolo rollout status deploy/bolo-voice-canary --timeout=120s
 kubectl get pods -A
+echo "Cluster ready. Now paste the NudgeBee agent install command."
