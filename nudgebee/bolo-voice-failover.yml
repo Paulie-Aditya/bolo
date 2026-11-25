@@ -7,13 +7,12 @@
 #     -> events.store       incident in NudgeBee, with AI analysis on
 #     -> llm.summary        plain-language brief for the approver
 #     -> core.approval      a human approves or rejects (in-app)
-#     -> integrations.http  Flagsmith Admin API: voice_ordering OFF (v2 feature versioning)
+#     -> integrations.http  Bolo /api/ops/voice: re-checks health, flips Flagsmith voice_ordering OFF
 #     -> events.add_evidence what was done, on the same incident
 #
 # Customers fall back to tap-to-order within seconds; orders keep flowing.
 #
-# Configs (Configuration Manager):  bolo_url, flagsmith_env_id, flagsmith_voice_feature_id
-# Secrets:                          flagsmith_admin_key
+# Configs (Configuration Manager):  bolo_url   (no secrets needed)
 
 name: bolo-voice-failover
 description: When Sarvam degrades during the festive rush, pause Bolo's voice ordering via a Flagsmith kill switch, with human approval
@@ -110,14 +109,13 @@ definition:
     depends_on:
     - approval
     params:
-      url: 'https://api.flagsmith.com/api/v1/environments/{{ Configs.flagsmith_env_id }}/features/{{ Configs.flagsmith_voice_feature_id }}/versions/'
+      # Bolo re-checks its own health and flips the Flagsmith kill switch server-side,
+      # so NudgeBee never holds a Flagsmith admin key.
+      url: '{{ Configs.bolo_url }}/api/ops/voice'
       method: POST
-      auth_type: api_key
-      api_header_name: Authorization
-      api_key: 'Api-Key {{ Secrets.flagsmith_admin_key }}'
       headers:
         Content-Type: application/json
-      body: '{"publish_immediately": true, "feature_states_to_update": [{"feature_segment": null, "enabled": false, "feature_state_value": {"type": "unicode", "string_value": ""}}]}'
+      body: '{"action": "disable", "source": "nudgebee", "approved_by": "{{ Tasks.approval.output.approver }}", "incident": "{{ Tasks.open_incident.output.id }}"}'
 
   - id: record
     type: events.add_evidence
@@ -132,7 +130,7 @@ definition:
       - type: markdown
         filename: action.md
         data:
-          text: 'Approved by {{ Tasks.approval.output.approver }}. Flagsmith voice_ordering switched OFF (HTTP {{ Tasks.disable_voice.output.status_code }}). Storefronts now show tap-to-order. Re-enable voice_ordering in Flagsmith once Sarvam recovers.'
+          text: 'Approved by {{ Tasks.approval.output.approver }}. Bolo switched Flagsmith voice_ordering OFF (HTTP {{ Tasks.disable_voice.output.status_code }}). Storefronts now show tap-to-order. Re-enable voice_ordering in Flagsmith once Sarvam recovers.'
         additional_info:
           actual_action_name: text_enricher
   llm_description: Use when Bolo's voice ordering is failing because Sarvam AI is degraded. Opens an incident, asks a human, then pauses voice ordering through a Flagsmith kill switch so customers can still tap to order.

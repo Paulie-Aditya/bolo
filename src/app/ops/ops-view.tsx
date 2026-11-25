@@ -16,14 +16,18 @@ const LOOP = [
   { who: "Bolo", what: "Every Sarvam call (STT, LLM, TTS, translate) is timed and logged. /api/health reports error rate and p95 latency for the last 5 minutes." },
   { who: "NudgeBee", what: "A scheduled automation polls /api/health every minute. When status is degraded and voice ordering is still on, it stores an event, which triggers NudgeBee's AI analysis." },
   { who: "Human", what: "The runbook pauses on an Approval step. The on-call person (or shop owner) approves or rejects in NudgeBee." },
-  { who: "Flagsmith", what: "On approval NudgeBee calls the Flagsmith Admin API and switches voice_ordering off. No redeploy." },
+  { who: "Flagsmith", what: "On approval NudgeBee calls Bolo\u2019s failover endpoint, which re-checks health and switches voice_ordering off through the Flagsmith Admin API. No redeploy, and no admin key in NudgeBee." },
   { who: "Customers", what: "The storefront falls back to tap-to-order within seconds. Orders keep flowing during the outage. Switch the flag back on when Sarvam recovers." },
 ];
 
 export default function Ops() {
   const [h, setH] = useState<Health | null>(null);
+  const [audit, setAudit] = useState<{ at: string; action: string; source: string; approved_by: string; incident: string; error_rate: number; flagsmith_status: number }[]>([]);
   useEffect(() => {
-    const load = () => fetch("/api/health", { cache: "no-store" }).then((r) => r.json()).then(setH).catch(() => {});
+    const load = () => {
+      fetch("/api/health", { cache: "no-store" }).then((r) => r.json()).then(setH).catch(() => {});
+      fetch("/api/ops/voice", { cache: "no-store" }).then((r) => r.json()).then((d) => setAudit(d.actions ?? [])).catch(() => {});
+    };
     load();
     const t = setInterval(load, 4000);
     return () => clearInterval(t);
@@ -78,6 +82,21 @@ export default function Ops() {
           </li>
         ))}
       </ol>
+
+      <h2 className="font-display text-2xl font-bold mt-10">Failover audit trail</h2>
+      <div className="card mt-3 divide-y divide-line">
+        {audit.length === 0 && <div className="p-4 text-sm text-ink-2">No failover actions yet.</div>}
+        {audit.map((a) => (
+          <div key={a.at} className="p-3 text-sm flex flex-wrap gap-x-4 gap-y-1">
+            <span className="font-mono text-xs text-ink-2">{new Date(a.at).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" })} IST</span>
+            <b>{a.action === "disable" ? "voice_ordering → OFF" : "voice_ordering → ON"}</b>
+            <span>via {a.source}</span>
+            {a.approved_by && <span>approved by {a.approved_by}</span>}
+            {a.incident && <span className="text-ink-2 truncate max-w-xs">{a.incident}</span>}
+            <span className="text-ink-2">error rate {(a.error_rate * 100).toFixed(0)}% · Flagsmith {a.flagsmith_status}</span>
+          </div>
+        ))}
+      </div>
 
       <h2 className="font-display text-2xl font-bold mt-10">Raw health (what NudgeBee reads)</h2>
       <pre className="card p-4 mt-3 text-xs overflow-auto">{h ? JSON.stringify(h, null, 2) : "…"}</pre>

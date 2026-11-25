@@ -9,7 +9,7 @@ schedule (every minute)
             ├─ events.store         incident "Bolo voice ordering degraded" (AI analysis on)
             ├─ llm.summary          brief for the approver
             ├─ core.approval        human approves / rejects (in-app)
-            ├─ integrations.http    POST Flagsmith Admin API → voice_ordering OFF
+            ├─ integrations.http    POST Bolo /api/ops/voice → re-checks health → Flagsmith voice_ordering OFF
             └─ events.add_evidence  record who approved and what changed
 ```
 
@@ -18,9 +18,8 @@ Configuration Manager values:
 | Key | Type | Value |
 | --- | --- | --- |
 | `bolo_url` | Config | `https://bolo-festivehacks.vercel.app` |
-| `flagsmith_env_id` | Config | Flagsmith environment id (Production) |
-| `flagsmith_voice_feature_id` | Config | id of the `voice_ordering` feature |
-| `flagsmith_admin_key` | Secret | Flagsmith Organisation API key |
+
+No secrets live in NudgeBee. The failover endpoint is self-validating: Bolo only switches voice **off** while its own Sarvam health is degraded, and only back **on** once it's healthy. The Flagsmith Admin key stays in Bolo's server environment. Every action is recorded in an audit trail shown on `/ops`.
 
 ## Rehearse it (game day)
 
