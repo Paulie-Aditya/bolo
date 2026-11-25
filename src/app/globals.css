@@ -1,26 +1,164 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #fbf6ec;
+  --paper-2: #f4ead8;
+  --ink: #1d1712;
+  --ink-2: #5b4f45;
+  --line: #e6d9c3;
+  --accent: #e11d48;
+  --accent-2: #f59e0b;
+  --ok: #15803d;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-ok: var(--ok);
+  --font-sans: var(--font-body), "Noto Sans", "Noto Sans Devanagari", "Noto Sans Kannada", "Noto Sans Tamil", system-ui, sans-serif;
+  --font-display: var(--font-display-face), Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--paper);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* subtle rangoli dot texture */
+.texture {
+  background-image: radial-gradient(color-mix(in oklab, var(--accent-2) 28%, transparent) 1px, transparent 1.2px);
+  background-size: 18px 18px;
+}
+
+.card {
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 1px 0 rgba(29, 23, 18, 0.04), 0 8px 24px -16px rgba(29, 23, 18, 0.25);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: #fffdf8;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-weight: 700;
+  transition: transform 0.08s ease, opacity 0.15s ease, background 0.15s ease;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+.btn-accent {
+  background: var(--accent);
+  color: white;
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+.ring-pulse::before,
+.ring-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: pulse-ring 1.4s ease-out infinite;
+  z-index: -1;
+}
+.ring-pulse::after {
+  animation-delay: 0.7s;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.35s ease both;
+}
+
+@keyframes bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.eq span {
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  margin: 0 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: bar 0.9s ease-in-out infinite;
+  transform-origin: center;
+}
+.eq span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.eq span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.eq span:nth-child(4) {
+  animation-delay: 0.45s;
 }
