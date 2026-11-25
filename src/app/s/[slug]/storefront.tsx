@@ -389,7 +389,7 @@ export default function Storefront() {
 
         {/* Order review */}
         {lines.length > 0 && phase !== "placed" && (
-          <section className="card p-5 rise">
+          <section className="card p-5 rise min-w-0 overflow-hidden">
             <h3 className="font-display text-xl font-bold mb-3">Your order</h3>
             <ul className="divide-y divide-line">
               {lines.map((l) => (
@@ -439,7 +439,7 @@ export default function Storefront() {
               </div>
             )}
 
-            <div className="mt-4 grid gap-3">
+            <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3">
               <label className="text-sm font-semibold">
                 Name for the order
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Priya" className="mt-1 w-full rounded-xl border border-line bg-white px-3 py-2.5 outline-none focus:border-ink font-normal" />
@@ -453,6 +453,7 @@ export default function Storefront() {
                     <button
                       key={s.value}
                       disabled={s.full}
+                      ref={slot === s.value ? (el) => el?.scrollIntoView({ block: "nearest", inline: "center" }) : undefined}
                       onClick={() => setSlot(s.value)}
                       className={`shrink-0 rounded-xl border px-3 py-2 text-sm font-semibold transition ${slot === s.value ? "bg-ink text-paper border-ink" : "bg-white border-line"} ${s.full ? "opacity-40 line-through" : ""}`}
                     >

@@ -1,7 +1,7 @@
 import { apiError, json } from "@/lib/api";
 import { getShopFlags } from "@/lib/flags";
 import { chatJSON, transcribe } from "@/lib/sarvam";
-import { getShop } from "@/lib/shops";
+import { getShop, langLabel } from "@/lib/shops";
 
 export const maxDuration = 60;
 
@@ -49,7 +49,9 @@ Map the owner's sentence to ONE action:
 - rush_on: too many orders, switch on rush mode / limit orders
 - rush_off: rush is over, back to normal
 - unknown: anything else
-Use only catalog ids in items. Owner's language code: ${shop.ownerLang}.`;
+Use only catalog ids in items.
+english: the proposed change as an imperative, e.g. "Mark Mysore Pak as sold out" or "Turn on Rush Mode".
+confirm_text: the same proposal as a short yes/no question written in ${langLabel(shop.ownerLang)} (${shop.ownerLang}) in its native script, e.g. for Kannada "ಮೈಸೂರ್ ಪಾಕ್ ಸೋಲ್ಡ್ ಔಟ್ ಎಂದು ಗುರುತಿಸಲೇ?".`;
     const intent = await chatJSON<{ action: string; items: string[]; english: string; confirm_text: string }>(system, `Owner said: """${text}"""`, SCHEMA, { chaos: flags.chaos, maxTokens: 400 });
     intent.items = (intent.items || []).filter((i) => shop.catalog.some((c) => c.id === i));
     return json({ heard: text, intent });

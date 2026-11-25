@@ -1,0 +1,138 @@
+---
+# Bolo | Voice failover runbook (NudgeBee Workflow Builder)
+#
+# Every minute during the festive rush:
+#   GET  Bolo /api/health  (error rate + p95 of every Sarvam STT / LLM / TTS / translate call)
+#   if   action_needed == disable_voice_ordering
+#     -> events.store       incident in NudgeBee, with AI analysis on
+#     -> llm.summary        plain-language brief for the approver
+#     -> core.approval      a human approves or rejects (in-app)
+#     -> integrations.http  Flagsmith Admin API: voice_ordering OFF (v2 feature versioning)
+#     -> events.add_evidence what was done, on the same incident
+#
+# Customers fall back to tap-to-order within seconds; orders keep flowing.
+#
+# Configs (Configuration Manager):  bolo_url, flagsmith_env_id, flagsmith_voice_feature_id
+# Secrets:                          flagsmith_admin_key
+
+name: bolo-voice-failover
+description: When Sarvam degrades during the festive rush, pause Bolo's voice ordering via a Flagsmith kill switch, with human approval
+definition:
+  triggers:
+  - type: schedule
+    params:
+      cron: '*/1 * * * *'
+    layout:
+      x: 400
+      y: 80
+  - type: manual
+    layout:
+      x: 700
+      y: 80
+  tasks:
+  - id: check_health
+    type: integrations.http
+    layout:
+      x: 400
+      y: 240
+    params:
+      url: '{{ Configs.bolo_url }}/api/health'
+      method: GET
+      timeout: 15s
+
+  - id: open_incident
+    if: '{{ Tasks.check_health.output.body.action_needed == ''disable_voice_ordering'' }}'
+    type: events.store
+    layout:
+      x: 400
+      y: 420
+    depends_on:
+    - check_health
+    params:
+      trigger_ai_analysis: true
+      trigger_notification_im: true
+      event:
+        title: 'Bolo voice ordering degraded: Sarvam error rate {{ Tasks.check_health.output.body.sarvam.error_rate }}'
+        description: 'Bolo saw {{ Tasks.check_health.output.body.sarvam.errors }} failed Sarvam calls out of {{ Tasks.check_health.output.body.sarvam.calls }} in the last 5 minutes (p95 {{ Tasks.check_health.output.body.sarvam.p95_ms }} ms). Last error: {{ Tasks.check_health.output.body.sarvam.last_error }}. Customers trying to order by voice are failing during the festive rush.'
+        aggregation_key: bolo_voice_degraded
+        finding_id: 'bolo-voice-{{ Tasks.check_health.output.body.at }}'
+        finding_type: voice_pipeline_degraded
+        subject_name: bolo-voice-pipeline
+        subject_type: service
+        status: FIRING
+        priority: HIGH
+        source: automation
+        category: availability
+        labels:
+          service: bolo
+          dependency: sarvam-ai
+          flag: voice_ordering
+        evidences:
+        - type: markdown
+          filename: health.md
+          data:
+            text: 'Bolo /api/health at {{ Tasks.check_health.output.body.at }}: {{ Tasks.check_health.output.body.sarvam }}'
+          additional_info:
+            actual_action_name: text_enricher
+
+  - id: brief
+    type: llm.summary
+    layout:
+      x: 400
+      y: 580
+    depends_on:
+    - open_incident
+    params:
+      message: 'You are the on-call SRE for Bolo, a voice ordering service for sweet shops during the festive rush. In 2-3 plain sentences tell the approver what is failing and what approving will do. Health: {{ Tasks.check_health.output.body }}. Approving switches the Flagsmith flag voice_ordering OFF so customers use tap-to-order until Sarvam recovers. Nothing else changes.'
+    timeout: 2m
+
+  - id: approval
+    type: core.approval
+    layout:
+      x: 400
+      y: 740
+    depends_on:
+    - brief
+    params:
+      approval_type: in_app
+      message: 'Pause Bolo voice ordering? {{ Tasks.brief.output }}'
+      approval_options:
+      - approve
+      - reject
+    timeout: 30m
+
+  - id: disable_voice
+    if: '{{ Tasks.approval.output.status == ''approve'' }}'
+    type: integrations.http
+    layout:
+      x: 400
+      y: 900
+    depends_on:
+    - approval
+    params:
+      url: 'https://api.flagsmith.com/api/v1/environments/{{ Configs.flagsmith_env_id }}/features/{{ Configs.flagsmith_voice_feature_id }}/versions/'
+      method: POST
+      auth_type: api_key
+      api_header_name: Authorization
+      api_key: 'Api-Key {{ Secrets.flagsmith_admin_key }}'
+      headers:
+        Content-Type: application/json
+      body: '{"publish_immediately": true, "feature_states_to_update": [{"feature_segment": null, "enabled": false, "feature_state_value": {"type": "unicode", "string_value": ""}}]}'
+
+  - id: record
+    type: events.add_evidence
+    layout:
+      x: 400
+      y: 1060
+    depends_on:
+    - disable_voice
+    params:
+      event_id: '{{ Tasks.open_incident.output.id }}'
+      evidences:
+      - type: markdown
+        filename: action.md
+        data:
+          text: 'Approved by {{ Tasks.approval.output.approver }}. Flagsmith voice_ordering switched OFF (HTTP {{ Tasks.disable_voice.output.status_code }}). Storefronts now show tap-to-order. Re-enable voice_ordering in Flagsmith once Sarvam recovers.'
+        additional_info:
+          actual_action_name: text_enricher
+  llm_description: Use when Bolo's voice ordering is failing because Sarvam AI is degraded. Opens an incident, asks a human, then pauses voice ordering through a Flagsmith kill switch so customers can still tap to order.

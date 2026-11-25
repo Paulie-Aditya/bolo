@@ -95,28 +95,38 @@ export async function chatJSON<T>(
 ): Promise<T> {
   return tracked("chat", !!opts.chaos, async () => {
     let lastErr: unknown;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    // Attempt 1: strict JSON schema. Attempt 2: JSON mode with the schema spelled out in the prompt
+    // (strict decoding occasionally stops right after an array).
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const strict = attempt !== 1;
+      const sys = strict
+        ? system
+        : `${system}\n\nRespond with ONE JSON object only, matching this JSON schema exactly (all keys required):\n${JSON.stringify(schema.schema)}`;
       const d = await postJSON(
         "/v1/chat/completions",
         {
           model: "sarvam-105b",
           reasoning_effort: null,
-          temperature: attempt ? 0 : 0.2,
+          temperature: attempt ? 0.1 : 0.2,
           max_tokens: opts.maxTokens ?? 1200,
           messages: [
-            { role: "system", content: system },
+            { role: "system", content: sys },
             { role: "user", content: user },
           ],
-          response_format: { type: "json_schema", json_schema: { name: schema.name, schema: schema.schema, strict: true } },
+          response_format: strict ? { type: "json_schema", json_schema: { name: schema.name, schema: schema.schema, strict: true } } : { type: "json_object" },
         },
         "chat",
       );
       const content: string = d.choices?.[0]?.message?.content ?? "";
       try {
-        return parseLooseJSON<T>(content);
+        const parsed = parseLooseJSON<Record<string, unknown>>(content);
+        const required = (schema.schema.required as string[] | undefined) ?? [];
+        const missing = required.filter((k) => !(k in parsed));
+        if (missing.length) throw new Error(`missing keys: ${missing.join(",")}`);
+        return parsed as T;
       } catch (e) {
         lastErr = e;
-        console.warn("[sarvam] chat JSON parse failed, retrying", content.slice(0, 300));
+        console.warn(`[sarvam] chat JSON attempt ${attempt + 1} failed:`, (e as Error).message, content.slice(0, 200));
       }
     }
     throw lastErr;

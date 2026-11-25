@@ -346,6 +346,7 @@ function OrderCard({ o, ownerLang, fresh, busy, cta, onNext }: { o: Order; owner
         <div className="mt-2 rounded-lg bg-paper-2/70 px-2.5 py-1.5 text-sm">
           <span className="text-[10px] font-bold uppercase text-ink-2 mr-1">{ownerLang}</span>
           {o.ownerSummary}
+          <div className="text-[11px] text-ink-2 mt-0.5">{o.englishSummary}</div>
         </div>
       )}
       {o.notes && <div className="mt-1.5 text-xs text-amber-800">📝 {o.notes}</div>}

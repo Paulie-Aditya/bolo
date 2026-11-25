@@ -260,7 +260,7 @@ export async function createOrder(input: Omit<Order, "id" | "token" | "createdAt
   const id = `${input.shop.slice(0, 3)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   let ownerSummary = "";
   try {
-    if (ownerLang !== "en-IN" && input.englishSummary) ownerSummary = await translate(input.englishSummary, ownerLang, "en-IN");
+    if (ownerLang !== "en-IN") ownerSummary = await translate(ownerSentence(input), ownerLang, "en-IN");
   } catch {
     ownerSummary = "";
   }
@@ -276,6 +276,13 @@ export async function createOrder(input: Omit<Order, "id" | "token" | "createdAt
   await saveOrder(order);
   await lpush(`orders:${input.shop}`, id, 1000);
   return order;
+}
+
+/** A plain sentence translates far better than a dash-separated summary. */
+function ownerSentence(o: { customerName: string; lines: OrderLine[]; slotLabel: string; total: number; notes: string }) {
+  const items = o.lines.map((l) => `${l.unit === "kg" ? formatQty(l.qty, l.unit) : l.unit === "pc" ? `${l.qty} pieces` : `${l.qty} box`} ${l.name.replace(/ \(.*\)/, "")}`);
+  const list = items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : items[0];
+  return `${o.customerName || "A customer"} ordered ${list}. Pickup at ${o.slotLabel}. Total ${Math.round(o.total).toLocaleString("en-IN")} rupees.${o.notes ? ` Note: ${o.notes}` : ""}`;
 }
 
 export async function soldOut(shopSlug: string) {
